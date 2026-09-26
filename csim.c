@@ -42,7 +42,7 @@ Cache *create_cache(unsigned long block_bits, unsigned long set_bits,
                     unsigned long lines_per_set) {
 
     Cache *new_cache = NULL;
-    new_cache = malloc(sizeof(Cache));
+    new_cache = calloc(1, sizeof(Cache));
     if (new_cache == NULL) {
         free_cache(new_cache);
         printf("Allocation Failure");
@@ -55,7 +55,7 @@ Cache *create_cache(unsigned long block_bits, unsigned long set_bits,
     new_cache->line_len = lines_per_set;
 
     new_cache->lines =
-        malloc(sizeof(Line) * new_cache->set_len * new_cache->line_len);
+        calloc(sizeof(Line), new_cache->set_len * new_cache->line_len);
 
     if (new_cache->lines == NULL) {
         free_cache(new_cache);
