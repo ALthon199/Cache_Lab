@@ -26,7 +26,7 @@
  *     other tricks to hide array data in other forms of local or global memory.
  *
  * TODO: fill in your name and Andrew ID below.
- * @author Your Name <andrewid@andrew.cmu.edu>
+ * @author Anthony Lin <anthony6@andrew.cmu.edu>
  */
 
 #include <assert.h>
@@ -124,10 +124,71 @@ static void trans_tmp(size_t M, size_t N, double A[N][M], double B[M][N],
  */
 static void transpose_submit(size_t M, size_t N, double A[N][M], double B[M][N],
                              double tmp[TMPCOUNT]) {
-    if (M == N)
-        trans_basic(M, N, A, B, tmp);
-    else
-        trans_tmp(M, N, A, B, tmp);
+
+    size_t block_size = 8;
+
+    // Diagonals will cause the most cycles misses
+    // My idea is to process them and use the temp array to store the diagonal
+    // values. By processing them first, we can also store the diagonal values
+    // in the same cache line, since each diagonal block only uses certain cache
+    // lines, which can be avoided for temp throughout all diagonals.
+    for (size_t i = 0; i < N && i < M; i += block_size) {
+        size_t j = i;
+
+        size_t i_end = (i + block_size < N) ? i + block_size : N;
+        size_t j_end = (j + block_size < M) ? j + block_size : M;
+
+        // We can force all diagonal to use cache line 3
+        // Since only the diagonal starting at [24, 24] will use cache line 3
+        // [0, 0] -> line 0, [8, 8] -> line 1, [16, 16] -> line 2, [24, 24] ->
+        // line 3 If we get here, then we switch to different line
+
+        size_t tmp_offset = 24;
+        size_t cache_a = (i / block_size) % 4;
+
+        if (cache_a == 3) {
+            tmp_offset = 0;
+        }
+
+        for (size_t row = i; row < i_end; row++) {
+            for (size_t col = j; col < j_end; col++) {
+                if (row == col) {
+                    tmp[tmp_offset + (row - i)] = A[row][col];
+                } else {
+                    B[col][row] = A[row][col];
+                }
+            }
+        }
+
+        size_t diag_len = i_end - i;
+
+        if (j_end - j < diag_len) {
+            diag_len = j_end - j;
+        }
+
+        for (size_t k = 0; k < diag_len; k++) {
+            B[i + k][i + k] = tmp[tmp_offset + k];
+        }
+    }
+
+    // Process the rest of the blocks
+    for (size_t i = 0; i < N; i += block_size) {
+        for (size_t j = 0; j < M; j += block_size) {
+
+            if (i == j) {
+                continue;
+            }
+
+            size_t i_end = (i + block_size < N) ? i + block_size : N;
+            size_t j_end = (j + block_size < M) ? j + block_size : M;
+
+            for (size_t row = i; row < i_end; row++) {
+                for (size_t col = j; col < j_end; col++) {
+                    B[col][row] = A[row][col];
+                }
+            }
+        }
+    }
 }
 
 /**

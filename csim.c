@@ -75,7 +75,7 @@ void update_lines(Cache *cache, unsigned long set_idx, unsigned long line_idx) {
 
     for (unsigned long i = 0; i < line_idx; i++) {
         Line *line = &cache->lines[set_idx * line_len + i];
-        
+
         if (line->valid == 1 && line->recent_idx < curr_idx) {
             line->recent_idx += 1;
         }
@@ -83,13 +83,11 @@ void update_lines(Cache *cache, unsigned long set_idx, unsigned long line_idx) {
 
     for (unsigned long i = line_idx + 1; i < line_len; i++) {
         Line *line = &cache->lines[set_idx * line_len + i];
-      
+
         if (line->valid == 1 && line->recent_idx < curr_idx) {
             line->recent_idx += 1;
         }
     }
-
-
 
     cache->lines[set_idx * line_len + line_idx].recent_idx = 0;
     return;
@@ -98,15 +96,14 @@ void update_lines(Cache *cache, unsigned long set_idx, unsigned long line_idx) {
 Result update_set(Cache *cache, unsigned long set_idx, unsigned long tag,
                   int is_write, csim_stats_t *stats) {
 
-   
     unsigned long line_len = cache->line_len;
     // First find if already in cache
     for (unsigned long i = 0; i < line_len; i++) {
         Line *line = &cache->lines[set_idx * line_len + i];
-        
+
         if (line->valid == 1 && line->tag == tag) {
             // Already in cache so just update recent_idx
-            
+
             update_lines(cache, set_idx, i);
             stats->hits += 1;
 
@@ -129,14 +126,13 @@ Result update_set(Cache *cache, unsigned long set_idx, unsigned long tag,
             unsigned long greatest_recent_idx = 0;
             for (unsigned long j = 0; j < line_len; j++) {
                 Line *line2 = &cache->lines[set_idx * line_len + j];
-                if (line2->valid == 1 && line2->recent_idx > (unsigned long)greatest_recent_idx) {
+                if (line2->valid == 1 &&
+                    line2->recent_idx > (unsigned long)greatest_recent_idx) {
                     greatest_recent_idx = line2->recent_idx;
                 }
             }
 
-            
             line->recent_idx = (unsigned long)(greatest_recent_idx + 1);
-        
 
             line->valid = 1;
             line->tag = tag;
@@ -161,7 +157,7 @@ Result update_set(Cache *cache, unsigned long set_idx, unsigned long tag,
 
     // Because we EVICT CHECK TO MAKE SURE IT'S or NOT DIRTY
     Line *line = &cache->lines[set_idx * line_len + idx_to_remove];
-    
+
     if (line->dirty == 1) {
         // update stats
         stats->dirty_evictions += (1 << (cache->block_bits));
@@ -182,7 +178,7 @@ Result process_op(Cache *cache, char *op, unsigned long addr,
     unsigned long block_bits = cache->block_bits;
     unsigned long set_bits = cache->set_bits;
     Result result;
-    
+
     if (*op == 'S') {
         unsigned long set_idx = (addr >> block_bits) & ((1L << set_bits) - 1);
         unsigned long tag = addr & (~0UL << (block_bits + set_bits));
@@ -214,7 +210,7 @@ int process_trace_file(const char *trace, csim_stats_t *stats, Cache *cache,
                        char verbose) {
     FILE *tfp = fopen(trace, "rt");
     if (!tfp) {
-        fprintf(stderr, "Error opening ’%s ’: %s\n", trace, strerror(errno));
+        fprintf(stderr, "Error opening %s : %s\n", trace, strerror(errno));
         return 1;
     }
     int LINELEN = 512;
@@ -341,7 +337,7 @@ int main(int argc, char **argv) {
         printf("Allocation Failure");
         return 1;
     }
-    
+
     process_trace_file(file, stats, cache, verbose);
     free_cache(cache);
     free(stats);
